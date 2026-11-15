@@ -1,0 +1,15 @@
+services:
+  platform-admin:
+    build: .
+    container_name: platform-admin
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8092:8092"   # localhost only; Caddy proxies /admin on both domains here
+    networks:
+      - supabase
+
+networks:
+  supabase:
+    external: true
+    name: supabase_default

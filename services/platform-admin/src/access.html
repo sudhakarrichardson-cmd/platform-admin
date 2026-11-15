@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{platform_name}} — Admin</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1c2430; }
+  header { background: #1d4e9e; color: #fff; padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0; }
+  header .sp { flex: 1; }
+  header button { color: #fff; background: transparent; border: 1px solid #ffffff66; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
+  main { max-width: 1020px; margin: 0 auto; padding: 16px; }
+  .card { background: #fff; border: 1px solid #dde3ea; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; }
+  .card h3 { font-size: 13.5px; margin: 14px 0 6px; color: #33404e; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border-bottom: 1px solid #e6ebf0; padding: 8px; text-align: left; vertical-align: top; }
+  th { background: #f0f3f7; }
+  select, input { padding: 6px 8px; border: 1px solid #c3ccd6; border-radius: 6px; font-size: 14px; }
+  button.act { background: #1d4e9e; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
+  button.ghost { background: #fff; border: 1px solid #c3ccd6; border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px; }
+  button.danger { background: #fff; border: 1px solid #d8a7a3; color: #b3261e; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+  .muted { color: #66727f; font-size: 13px; }
+  .chip { display: inline-block; background: #e8eef7; border-radius: 20px; padding: 3px 10px; margin: 2px 4px 2px 0; font-size: 12.5px; }
+  .adminrow { display: flex; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid #eef1f5; flex-wrap: wrap; }
+  .ok { color: #177245; } .err { color: #b3261e; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+  .row label { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; color: #44505c; }
+  td select.granted { border-color: #177245; background: #eefaf3; }
+  #loginCard { max-width: 420px; margin: 40px auto; }
+  #loginCard label { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; color: #44505c; margin-bottom: 10px; }
+  #loginCard input { width: 100%; box-sizing: border-box; }
+.tabbar { display: flex; gap: 6px; margin: 0 0 10px; }
+.tabbar button { border: 1px solid #1d4e9e; background: #fff; color: #1d4e9e; padding: 7px 14px; border-radius: 18px; cursor: pointer; font-weight: 600; }
+.tabbar button.on { background: #1d4e9e; color: #fff; }
+body.embed header { display: none; }
+body.embed #tabFuncs { display: none; }
+body.embed .tabbar { display: none; }
+/* Embedded in the store console (People & access): the console provides the
+   frame, header and menu, so use the full width, drop the intro that talks
+   about the App functions tab, and keep the people table usable when narrow. */
+body.embed { background: #fff; }
+body.embed main { max-width: none; padding: 12px; }
+body.embed #appIntro { display: none; }
+.tablewrap { overflow-x: auto; }
+#peopleBox td { overflow-wrap: anywhere; }
+#peopleBox td:nth-child(n+2) { white-space: nowrap; }
+@media (max-width: 600px) {
+  main { padding: 10px; }
+  .card { padding: 12px; }
+  /* Phones: one person per block (name, role, state, buttons stacked)
+     instead of a four-column table that runs off the screen. */
+  #peopleBox table, #peopleBox tbody, #peopleBox tr, #peopleBox td { display: block; width: auto; }
+  #peopleBox tr:first-child { display: none; }
+  #peopleBox tr { border-bottom: 1px solid #e6ebf0; padding: 6px 0; }
+  #peopleBox td { border: 0; padding: 3px 4px; white-space: normal; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="ttl">🔐 {{platform_name}} — Admin</h1>
+  <span class="sp"></span>
+  <span id="who" style="color:#dbe6f5; font-size:13px"></span>
+  <button id="logoutBtn" style="display:none">Logout</button>
+</header>
+<main>
+  <div class="card" id="loginCard" style="display:none">
+    <h2 id="liTitle">Sign in</h2>
+    <p class="muted" id="liHint"></p>
+    <label id="liUserWrap">Username <input id="liUser" autocomplete="username" placeholder="Admin username"></label>
+    <label id="liEmailWrap" style="display:none">Email <input id="liEmail" type="email" autocomplete="username" placeholder="you@example.com"></label>
+    <label>Password <input id="liPass" type="password" autocomplete="current-password" placeholder="Password"></label>
+    <button class="act" id="liBtn">Sign in</button>
+    <p id="liMsg" class="muted"></p>
+  </div>
+
+  <div id="platformUI" style="display:none">
+    <p class="muted">You are the platform admin. Here you manage the applications and <b>who administers each app</b>. Each app's admin then manages their own staff from that app's admin page.</p>
+    <div class="card">
+      <h2>Applications &amp; their admins</h2>
+      <div id="appsBox"><span class="muted">Loading…</span></div>
+      <p id="pMsg" class="muted"></p>
+    </div>
+    <div class="card">
+      <h2>Recent changes</h2>
+      <div id="pAudit"><span class="muted">—</span></div>
+    </div>
+  </div>
+
+  <div id="appUI" style="display:none">
+    <p class="muted" id="appIntro">You administer <b id="appName"></b>. Two sections on this one page: <b>User admin</b> — this app's people and roles; <b>App functions</b> — the full app itself (orders, stock, purchases, reports, approvals, delivery, returns), signed in with your same login.</p>
+    <div class="tabbar">
+      <button id="tabUsers" class="on" type="button">User admin</button>
+      <button id="tabFuncs" type="button">App functions</button>
+    </div>
+    <div id="usersPane">
+    <div class="card">
+      <h2>People in this app</h2>
+      <div id="peopleBox"><span class="muted">Loading…</span></div>
+      <p id="aMsg" class="muted"></p>
+    </div>
+    <div class="card">
+      <h2>Add staff</h2>
+      <h3>New login</h3>
+      <div class="row">
+        <label>Email <input id="nEmail" type="email" size="22" placeholder="name@example.com"></label>
+        <label>Full name <input id="nName" size="16" placeholder="Display name"></label>
+        <label>Phone <input id="nPhone" size="12" placeholder="98XXXXXXXX"></label>
+        <label>Temporary password <input id="nPass" size="14" placeholder="min 8 characters"></label>
+        <label>Role <select id="nRole"></select></label>
+        <button class="act" id="nCreate">Create + grant</button>
+      </div>
+      <h3>Existing login (person already has a login somewhere on the platform)</h3>
+      <p class="muted" style="margin:4px 0 8px">Type their exact email to look them up — the login pool is never listed here.</p>
+      <div class="row">
+        <label>Email <input id="xEmail" type="email" size="26" placeholder="person@example.com"></label>
+        <button class="ghost" id="xLookup">Look up</button>
+      </div>
+      <div class="row" id="xResult" style="margin-top:8px; display:none">
+        <span id="xWho"></span>
+        <label>Role <select id="xRole"></select></label>
+        <button class="act" id="xAdd">Grant access</button>
+      </div>
+      <p id="xMsg" class="muted"></p>
+    </div>
+    <div class="card">
+      <h2>Recent changes</h2>
+      <div id="aAudit"><span class="muted">—</span></div>
+    </div>
+    </div>
+    <div id="funcsPane" style="display:none">
+      <p class="muted">The full app, on this page. <a href="/console" target="_blank" rel="noopener">Open in a new tab ↗</a></p>
+      <iframe id="funcsFrame" title="App functions" style="width:100%; height:82vh; border:1px solid #ddd; border-radius:8px; background:#fff"></iframe>
+    </div>
+  </div>
+</main>
+<script>
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let SURF = null;       // {surface:'platform'} | {surface:'app', app_code, display_name}
+let TOKEN = '';
+let DATA = null;       // platform overview or app overview
+
+function tokenKey() { return SURF && SURF.surface === 'platform' ? 'pfPlatformSession' : 'pfAppToken'; }
+function headers() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN }; }
+async function api(path, method, body) {
+  const res = await fetch(path, { method: method || 'GET', headers: headers(), body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) { signOut(); throw new Error('Session expired — please sign in again.'); }
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+function signOut() {
+  if (SURF) localStorage.removeItem(tokenKey());
+  TOKEN = '';
+  document.getElementById('platformUI').style.display = 'none';
+  document.getElementById('appUI').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('who').textContent = '';
+  document.getElementById('loginCard').style.display = '';
+}
+document.getElementById('logoutBtn').onclick = signOut;
+
+function auditHtml(rows) {
+  if (!rows || !rows.length) return '<span class="muted">No changes recorded yet.</span>';
+  return '<div class="tablewrap"><table><tr><th>When</th><th>By</th><th>Person</th><th>App</th><th>Change</th></tr>' + rows.map((r) =>
+    '<tr><td>' + esc(new Date(r.created_at).toLocaleString()) + '</td><td>' + esc(r.actor) + '</td><td>' + esc(r.target_email || '') + '</td><td>' + esc(r.app_code || '—') + '</td><td>' + esc(r.action) + (r.detail && r.detail.role_code ? ' · ' + esc(r.detail.role_code) : '') + '</td></tr>').join('') + '</table></div>';
+}
+
+// ---------------- sign-in ----------------
+document.getElementById('liBtn').onclick = async () => {
+  const msg = document.getElementById('liMsg');
+  msg.textContent = 'Signing in…';
+  try {
+    const payload = SURF.surface === 'platform'
+      ? { username: document.getElementById('liUser').value.trim(), password: document.getElementById('liPass').value }
+      : { email: document.getElementById('liEmail').value.trim(), password: document.getElementById('liPass').value };
+    const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    TOKEN = data.session_token || data.access_token;
+    localStorage.setItem(tokenKey(), TOKEN);
+    document.getElementById('liPass').value = '';
+    msg.textContent = '';
+    await enter(SURF.surface === 'platform' ? 'DB admin' : (data.user && data.user.email));
+  } catch (e) { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+};
+
+async function enter(who) {
+  document.getElementById('loginCard').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = '';
+  document.getElementById('who').textContent = who || '';
+  if (SURF.surface === 'platform') { document.getElementById('platformUI').style.display = ''; await loadPlatform(); }
+  else { document.getElementById('appUI').style.display = ''; document.getElementById('appName').textContent = SURF.display_name; await loadApp(); }
+}
+
+// ---------------- platform mode ----------------
+async function loadPlatform() {
+  DATA = await api('/api/platform/overview');
+  const box = document.getElementById('appsBox');
+  if (!DATA.apps.length) { box.innerHTML = '<span class="muted">No applications registered.</span>'; }
+  box.innerHTML = DATA.apps.map((a) => {
+    const admins = a.admins.length
+      ? a.admins.map((ad) => '<div class="adminrow"><span><b>' + esc(ad.display_name || ad.email || ad.user_id) + '</b> <span class="muted">' + esc(ad.email || '') + '</span></span><span style="flex:1"></span><button class="danger" data-remove="' + a.app_code + '|' + ad.user_id + '">Remove admin</button></div>').join('')
+      : '<p class="muted">No admins yet — add one below.</p>';
+    const adminIds = new Set(a.admins.map((x) => x.user_id));
+    const candidates = DATA.logins.filter((u) => !adminIds.has(u.id));
+    return '<div class="card" style="margin-bottom:12px"><h2>' + esc(a.display_name) + '</h2>' +
+      '<p class="muted">schema <code>' + esc(a.schema_name) + '</code>' + (a.domain ? ' · ' + esc(a.domain) : '') + ' · admin role: <b>' + esc(a.admin_role_code || '—') + '</b>' + (a.active ? '' : ' · INACTIVE') + '</p>' +
+      admins +
+      '<h3>Add an admin</h3><div class="row">' +
+      '<label>Existing login <select id="sel-' + a.app_code + '">' + candidates.map((u) => '<option value="' + u.id + '">' + esc(u.display_name ? u.display_name + ' (' + u.email + ')' : u.email) + '</option>').join('') + '</select></label>' +
+      '<button class="act" data-addsel="' + a.app_code + '">Make admin</button></div>' +
+      '<div class="row" style="margin-top:8px">' +
+      '<label>…or new login — email <input id="em-' + a.app_code + '" type="email" size="20" placeholder="name@example.com"></label>' +
+      '<label>Full name <input id="nm-' + a.app_code + '" size="14"></label>' +
+      '<label>Temp password <input id="pw-' + a.app_code + '" size="12" placeholder="min 8 chars"></label>' +
+      '<button class="ghost" data-addnew="' + a.app_code + '">Create + make admin</button></div></div>';
+  }).join('');
+  document.getElementById('pAudit').innerHTML = auditHtml(DATA.audit);
+  const msg = document.getElementById('pMsg');
+  box.querySelectorAll('[data-remove]').forEach((btn) => { btn.onclick = async () => {
+    const [appCode, userId] = btn.getAttribute('data-remove').split('|');
+    if (!confirm('Remove this admin? Their login and any staff access stay; only the admin role for this app is deactivated.')) return;
+    try { await api('/api/platform/app-admins', 'DELETE', { app_code: appCode, user_id: userId }); msg.innerHTML = '<span class="ok">Admin removed.</span>'; await loadPlatform(); }
+    catch (e) { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+  }; });
+  box.querySelectorAll('[data-addsel]').forEach((btn) => { btn.onclick = async () => {
+    const appCode = btn.getAttribute('data-addsel');
+    const sel = document.getElementById('sel-' + appCode);
+    if (!sel || !sel.value) { msg.innerHTML = '<span class="err">No login selected.</span>'; return; }
+    try { await api('/api/platform/app-admins', 'POST', { app_code: appCode, user_id: sel.value }); msg.innerHTML = '<span class="ok">Admin added.</span>'; await loadPlatform(); }
+    catch (e) { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+  }; });
+  box.querySelectorAll('[data-addnew]').forEach((btn) => { btn.onclick = async () => {
+    const appCode = btn.getAttribute('data-addnew');
+    try {
+      await api('/api/platform/app-admins', 'POST', { app_code: appCode, email: document.getElementById('em-' + appCode).value.trim(), display_name: document.getElementById('nm-' + appCode).value.trim(), password: document.getElementById('pw-' + appCode).value });
+      msg.innerHTML = '<span class="ok">Login created and made admin.</span>'; await loadPlatform();
+    } catch (e) { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+  }; });
+}
+
+// ---------------- app mode ----------------
+async function loadApp() {
+  DATA = await api('/api/app/overview');
+  const box = document.getElementById('peopleBox');
+  const roles = DATA.roles;
+  const roleOpts = (cur) => '<option value="">— no access —</option>' + roles.map((r) => '<option value="' + esc(r) + '"' + (r === cur ? ' selected' : '') + '>' + esc(r) + '</option>').join('') + (cur && !roles.includes(cur) ? '<option value="' + esc(cur) + '" selected>' + esc(cur) + '</option>' : '');
+  const myId = DATA.me && DATA.me.user_id;
+  box.innerHTML = DATA.people.length
+    ? '<div class="tablewrap"><table><tr><th>Person</th><th>Role</th><th>State</th><th></th></tr>' + DATA.people.map((p) => {
+        const isMe = p.user_id === myId;
+        return '<tr><td><b>' + esc(p.display_name || p.email || p.user_id) + '</b>' + (isMe ? ' <span class="chip">You</span>' : '') + '<br><span class="muted">' + esc(p.email || '') + (p.phone ? ' · ' + esc(p.phone) : '') + '</span></td>' +
+        '<td><select data-user="' + p.user_id + '" class="' + (p.active ? 'granted' : '') + '"' + (isMe ? ' disabled title="You cannot change your own access"' : '') + '>' + roleOpts(p.active ? p.role_code : '') + '</select></td>' +
+        '<td>' + (p.active ? '<span class="ok">active</span>' : '<span class="muted">inactive</span>') + '</td>' +
+        '<td>' + (isMe ? '<span class="muted">— your own login —</span>' : '<button class="ghost" data-reset="' + p.user_id + '" data-email="' + esc(p.email || '') + '">Reset password</button> <button class="danger" data-del="' + p.user_id + '" data-email="' + esc(p.email || '') + '">Delete</button>') + '</td></tr>';
+      }).join('') + '</table></div>'
+    : '<span class="muted">Nobody has access yet — add staff below.</span>';
+  document.getElementById('nRole').innerHTML = roles.map((r) => '<option value="' + esc(r) + '">' + esc(r) + '</option>').join('');
+  document.getElementById('xRole').innerHTML = roles.map((r) => '<option value="' + esc(r) + '">' + esc(r) + '</option>').join('');
+  document.getElementById('aAudit').innerHTML = auditHtml(DATA.audit);
+  const msg = document.getElementById('aMsg');
+  box.querySelectorAll('select[data-user]').forEach((sel) => { sel.onchange = async () => {
+    const person = DATA.people.find((p) => p.user_id === sel.getAttribute('data-user'));
+    const role = sel.value || person.role_code;
+    try { await api('/api/app/grant', 'PUT', { user_id: person.user_id, role_code: role, active: !!sel.value }); msg.innerHTML = '<span class="ok">Saved.</span>'; await loadApp(); }
+    catch (e) { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+  }; });
+  box.querySelectorAll('[data-reset]').forEach((btn) => { btn.onclick = async () => {
+    const pw = prompt('New temporary password for ' + btn.getAttribute('data-email') + ' (min 8 characters):');
+    if (!pw) return;
+    try { await api('/api/app/password', 'POST', { user_id: btn.getAttribute('data-reset'), password: pw }); msg.innerHTML = '<span class="ok">Password updated — share it privately.</span>'; await loadApp(); }
+    catch (e) { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+  }; });
+  box.querySelectorAll('[data-del]').forEach((btn) => { btn.onclick = async () => {
+    const email = btn.getAttribute('data-email');
+    if (!confirm('Delete the login for ' + email + '?\n\nIf this login belongs only to this app, it is deleted permanently. If it is also used by another app, it cannot be deleted here — you will be offered removal from this app only.')) return;
+    try {
+      await api('/api/app/users', 'DELETE', { user_id: btn.getAttribute('data-del') });
+      msg.innerHTML = '<span class="ok">Login deleted permanently.</span>'; await loadApp();
+    } catch (e) {
+      if (/also used by another app/.test(e.message) && confirm(e.message + '\n\nRemove this person from THIS app only? (Their login and other apps stay untouched.)')) {
+        try { await api('/api/app/grant', 'DELETE', { user_id: btn.getAttribute('data-del') }); msg.innerHTML = '<span class="ok">Removed from this app only — the login itself was kept.</span>'; await loadApp(); }
+        catch (e2) { msg.innerHTML = '<span class="err">' + esc(e2.message) + '</span>'; }
+      } else { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+    }
+  }; });
+}
+
+document.getElementById('nCreate').onclick = async () => {
+  const msg = document.getElementById('xMsg');
+  try {
+    await api('/api/app/users', 'POST', { email: document.getElementById('nEmail').value.trim(), password: document.getElementById('nPass').value, display_name: document.getElementById('nName').value.trim(), phone: document.getElementById('nPhone').value.trim(), role_code: document.getElementById('nRole').value });
+    msg.innerHTML = '<span class="ok">Login created and granted.</span>';
+    document.getElementById('nPass').value = '';
+    await loadApp();
+  } catch (e) { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+};
+let XFOUND = null;
+document.getElementById('xLookup').onclick = async () => {
+  const msg = document.getElementById('xMsg');
+  const box = document.getElementById('xResult');
+  XFOUND = null; box.style.display = 'none';
+  const email = document.getElementById('xEmail').value.trim();
+  if (!email) { msg.innerHTML = '<span class="err">Type the person\u2019s email first.</span>'; return; }
+  msg.textContent = 'Looking up…';
+  try {
+    const r = await api('/api/app/lookup', 'POST', { email });
+    if (!r.found) { msg.innerHTML = '<span class="err">No login with that exact email. Check the spelling, or create them under \u201CNew login\u201D above.</span>'; return; }
+    if (r.already_in_app) { msg.innerHTML = '<span class="ok">' + esc(r.display_name || r.email) + ' already has access here' + (r.role_code ? ' (role: ' + esc(r.role_code) + (r.active ? '' : ', inactive') + ')' : '') + ' — change their role in the table above.</span>'; return; }
+    XFOUND = r;
+    document.getElementById('xWho').innerHTML = 'Found: <b>' + esc(r.display_name || r.email) + '</b> <span class="muted">' + esc(r.email) + '</span>';
+    box.style.display = '';
+    msg.textContent = '';
+  } catch (e) { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+};
+document.getElementById('xAdd').onclick = async () => {
+  const msg = document.getElementById('xMsg');
+  if (!XFOUND) { msg.innerHTML = '<span class="err">Look the person up first.</span>'; return; }
+  try {
+    await api('/api/app/grant', 'PUT', { user_id: XFOUND.user_id, role_code: document.getElementById('xRole').value, active: true });
+    msg.innerHTML = '<span class="ok">Access granted.</span>';
+    XFOUND = null; document.getElementById('xResult').style.display = 'none'; document.getElementById('xEmail').value = '';
+    await loadApp();
+  } catch (e) { msg.innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+};
+
+// ---------------- app page tabs ----------------
+function showAppTab(which) {
+  const users = which === 'users';
+  document.getElementById('tabUsers').classList.toggle('on', users);
+  document.getElementById('tabFuncs').classList.toggle('on', !users);
+  document.getElementById('usersPane').style.display = users ? '' : 'none';
+  document.getElementById('funcsPane').style.display = users ? 'none' : '';
+  if (!users) {
+    const f = document.getElementById('funcsFrame');
+    if (!f.getAttribute('src')) f.setAttribute('src', '/console'); // lazy-load on first open
+  }
+}
+document.getElementById('tabUsers').onclick = () => showAppTab('users');
+document.getElementById('tabFuncs').onclick = () => showAppTab('funcs');
+
+// ---------------- boot ----------------
+(async () => {
+  // Embedded inside the app workspace (People & access): drop this page's
+  // own header and tab bar — the workspace around it provides both, and
+  // its App functions tab would nest the console inside itself.
+  if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('embed');
+  const w = await (await fetch('/api/whoami')).json().catch(() => ({}));
+  SURF = w;
+  const card = document.getElementById('loginCard');
+  if (w.surface === 'platform') {
+    document.getElementById('ttl').textContent = '🔐 {{platform_name}} — Platform Admin';
+    document.title = '{{platform_name}} — Platform Admin';
+    document.getElementById('liTitle').textContent = 'Platform admin sign-in';
+    document.getElementById('liHint').textContent = 'Use the DB admin username and password (the same pair as the database dashboard).';
+    card.style.display = '';
+  } else if (w.surface === 'app') {
+    document.getElementById('ttl').textContent = '🔐 ' + w.display_name + ' — App Admin';
+    document.title = w.display_name + ' — App Admin';
+    document.getElementById('liTitle').textContent = 'App admin sign-in';
+    document.getElementById('liHint').textContent = 'Sign in with your email and password. Only this app\u2019s admins can enter.';
+    document.getElementById('liUserWrap').style.display = 'none';
+    document.getElementById('liEmailWrap').style.display = '';
+    card.style.display = '';
+  } else {
+    document.getElementById('ttl').textContent = '🔐 {{platform_name}} — Admin';
+    card.style.display = '';
+    document.getElementById('liTitle').textContent = 'Not an admin address';
+    document.getElementById('liHint').textContent = 'This domain is not an admin surface.';
+    document.getElementById('liBtn').style.display = 'none';
+    return;
+  }
+  TOKEN = localStorage.getItem(tokenKey()) || '';
+  // On the store's domain the console (authToken) and this page (pfAppToken)
+  // hold the same Supabase login. The console already adopts pfAppToken; do
+  // the reverse here, so People & access inside the console does not ask
+  // for a second sign-in when only the console's copy is present.
+  if (!TOKEN && SURF.surface === 'app') {
+    const shared = localStorage.getItem('authToken') || '';
+    if (shared) { TOKEN = shared; localStorage.setItem(tokenKey(), shared); }
+  }
+  if (TOKEN) {
+    enter(SURF.surface === 'platform' ? 'DB admin' : '').catch((e) => {
+      signOut();
+      // Say why the sign-in card is back instead of showing it silently.
+      document.getElementById('liMsg').innerHTML = '<span class="err">' + esc(e.message) + '</span>';
+    });
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+{"dependencies":{"pg":"^8.13.1"},"description":"Platform access administration — standalone service for the platform and store /admin pages","main":"src/server.js","name":"platform-admin","private":true,"scripts":{"start":"node src/server.js"},"version":"1.0.0"}
